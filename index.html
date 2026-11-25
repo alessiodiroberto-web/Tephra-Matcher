@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unknown glass comparison – Italian tephra database</title>
+<style>
+:root{--bg:#f3f5f7;--panel:#fff;--fg:#14202b;--mut:#5a6b7a;--acc:#0b6e75;--line:#d5dce2;--bad:#a4381f;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12181d;--panel:#1a232a;--fg:#e6edf2;--mut:#93a3b0;--acc:#4cc3c9;--line:#2b3842;--bad:#ff9b80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12181d;--panel:#1a232a;--fg:#e6edf2;--mut:#93a3b0;--acc:#4cc3c9;--line:#2b3842;--bad:#ff9b80;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.45rem;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
+h2{font-size:1rem;margin:0 0 10px;font-weight:650}
+p.sub{margin:0 0 18px;color:var(--mut);max-width:70ch}
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:.85rem;color:var(--mut);margin:8px 0 3px}
+input[type=number],select,textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+textarea{min-height:230px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.row>div{flex:1;min-width:110px}
+button,.btn{font:inherit;background:var(--acc);color:#fff;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;font-weight:600}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) button{color:#06262a}}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.vols{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px}
+.vols label{margin:0;color:var(--fg);display:flex;gap:5px;align-items:center}
+.note{font-size:.82rem;color:var(--mut)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.84rem;white-space:nowrap}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--mut);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.bad{color:var(--bad)}
+canvas{width:100%;height:380px;display:block}
+#st{margin-left:10px;color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+<h1>Comparing an unknown glass with the tephra database</h1>
+<p class="sub">Load the Excel database, paste the mean and standard deviation of the unknown, and get a ranking of the compatible units at 1 or 2 sigma. Everything runs in your browser: the file is never uploaded anywhere.</p>
+
+<section>
+<h2>1. Database</h2>
+<input type="file" id="file" accept=".xlsx,.xlsm">
+<span id="st">No file loaded.</span>
+</section>
+
+<section class="grid">
+<div>
+<h2>2. Unknown composition</h2>
+<textarea id="inp" spellcheck="false" placeholder="One line per element: name, mean, SD.
+SiO2  60.12  0.45
+TiO2  0.45   0.05
+Al2O3 18.9   0.30
+FeOt  3.6    0.20
+K2O   8.9    0.30
+Zr    280    15
+Nb    55     4
+Oxides in wt%, trace elements in ppm. The SD is optional."></textarea>
+<p class="note">Major and trace elements can be mixed or separate. The decimal separator can be a dot or a comma.</p>
+<details open style="margin-top:10px"><summary>I have the individual analyses (shards)</summary>
+<p class="note" style="margin:8px 0 0">Upload an Excel or CSV file with the analyses, or paste them below. The first row containing element names is used as the header; other columns (e.g. sample name) are ignored.</p>
+<input type="file" id="shf" accept=".xlsx,.xlsm,.xls,.csv" style="margin-top:6px">
+<select id="shs" hidden style="margin-top:6px"></select>
+<textarea id="sh" spellcheck="false" style="min-height:120px;margin-top:8px" placeholder="Paste from Excel: first row with the element names (SiO2, TiO2, … or Zr, Nb, …), then one row per analysis. Unrecognized columns, such as the sample name, are ignored."></textarea>
+<p style="margin:8px 0 0"><button id="mk" type="button">Calculate mean and SD</button> <span id="shn" class="note"></span></p></details>
+</div>
+<div>
+<h2>3. Criteria</h2>
+<div class="row">
+<div><label for="sig">Interval</label><select id="sig"><option value="1">1 sigma</option><option value="2" selected>2 sigma</option></select></div>
+<div><label for="mine">Shared elements (min.)</label><input type="number" id="mine" value="5" min="1"></div>
+<div><label for="srt">Sort by</label><select id="srt"><option value="c">Combined (SC + distance + Mahalanobis)</option><option value="f">Compatible elements</option><option value="sc">Borchardt SC</option><option value="d">Std. Euclidean distance</option><option value="mh">Mahalanobis</option></select></div>
+</div>
+<div class="row">
+<div><label for="a0">Min. age [BP]</label><input type="number" id="a0"></div>
+<div><label for="a1">Max. age [BP]</label><input type="number" id="a1"></div>
+</div>
+<label style="display:flex;gap:6px;align-items:center;color:var(--fg)"><input type="checkbox" id="norm" checked> Normalize major elements to 100% (10 oxides)</label>
+<label>Volcanoes</label>
+<div class="vols" id="vols"><span class="note">Available after loading.</span></div>
+<p style="margin:14px 0 0"><button id="go">Compare</button></p>
+<p class="note">An element is compatible if the intervals of the unknown and of the unit overlap: |Δ| ≤ k·(σ unknown + σ unit). Zero σ values are raised to 1% of the mean.</p>
+</div>
+</section>
+
+<section id="out" hidden>
+<h2>Candidates</h2>
+<div class="tw" id="res"></div>
+</section>
+
+<section id="pl" hidden>
+<h2>Check plot</h2>
+<div class="row">
+<div><label for="sx">X axis</label><select id="sx"></select></div>
+<div><label for="sy">Y axis</label><select id="sy"></select></div>
+</div>
+<canvas id="cv"></canvas>
+<p class="note">Grey: database analyses in the area. Colours: top five units. Black rectangle: unknown ± k·σ. The ranking shows where to look; the correlation must be confirmed on the plots.</p>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const OX=['SiO2','TiO2','Al2O3','FeOt','MnO','MgO','CaO','Na2O','K2O','P2O5'];
+const COL=['#d1495b','#2e86ab','#e0a100','#6a994e','#9b5de5'];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=x=>typeof x==='number'&&isFinite(x)?x:null;
+let G={},R=[],TR=new Set(),TOP=[],UNK=null,K=2,ALLOW=new Set();
+
+$('#file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  $('#st').textContent='Reading…';
+  const fr=new FileReader();
+  fr.onload=()=>{try{load(fr.result,f.name)}catch(err){$('#st').textContent='Error: '+err.message}};
+  fr.readAsArrayBuffer(f);
+};
+
+function load(buf,name){
+  if(typeof XLSX==='undefined')throw new Error('Excel library not loaded');
+  const wb=XLSX.read(buf,{type:'array'});
+  G={};R=[];TR=new Set();
+  const vols=new Set();
+  wb.SheetNames.forEach(sn=>{
+    const m=sn.match(/^(.+) - (maggiori|tracce)$/);if(!m)return;
+    const vol=m[1],maj=m[2]==='maggiori';
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:true});
+    const h=rows[1]||[],cols=[];
+    if(!maj)h.forEach((x,j)=>{const t=typeof x==='string'&&x.match(/^([A-Z][a-z]?)\s*\[ppm\]$/);if(t&&j>=8)cols.push([j,t[1]])});
+    for(let i=2;i<rows.length;i++){
+      const r=rows[i];if(!r||!r[0])continue;
+      const v={};
+      if(maj){
+        const raw=OX.map((o,k)=>num(r[8+k]));
+        const s=raw.reduce((a,b)=>a+(b||0),0);
+        OX.forEach((o,k)=>{let n=num(r[24+k]);if(n==null&&raw[k]!=null&&s>0)n=100*raw[k]/s;if(n!=null)v[o]=n});
+      }else cols.forEach(([j,e])=>{const n=num(r[j]);if(n!=null){v[e]=n;TR.add(e)}});
+      if(!Object.keys(v).length)continue;
+      const key=vol+'|'+r[0]+'|'+(r[6]||'');
+      const g=G[key]||(G[key]={vol,unit:String(r[0]),ref:String(r[6]||''),ages:[],vals:{}});
+      vols.add(vol);
+      const a=num(r[1])!=null?r[1]:(num(r[2])!=null&&num(r[3])!=null?(r[2]+r[3])/2:null);
+      if(a!=null)g.ages.push(a);
+      for(const e in v)(g.vals[e]||(g.vals[e]=[])).push(v[e]);
+      R.push({k:key,v});
+    }
+  });
+  Object.values(G).forEach(g=>{
+    g.age=g.ages.length?g.ages.reduce((a,b)=>a+b)/g.ages.length:null;
+    g.st={};
+    for(const e in g.vals){
+      const a=g.vals[e],n=a.length,m=a.reduce((x,y)=>x+y)/n;
+      g.st[e]={m,s:n>1?Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(n-1)):0,n};
+    }
+  });
+  if(!R.length)throw new Error('no sheets named “… - maggiori/tracce” found');
+  $('#vols').innerHTML=[...vols].sort().map(v=>`<label><input type="checkbox" class="vol" value="${esc(v)}" checked> ${esc(v)}</label>`).join('');
+  const axes=[...OX,'Na2O+K2O',...[...TR].sort()];
+  $('#sx').innerHTML=$('#sy').innerHTML=axes.map(a=>`<option>${esc(a)}</option>`).join('');
+  $('#sx').value='SiO2';$('#sy').value='Na2O+K2O';
+  $('#st').textContent=`${name}: ${Object.keys(G).length} units, ${R.length} analyses.`;
+}
+
+function parse(){
+  const u={},f=s=>parseFloat(String(s).replace(',','.'));
+  $('#inp').value.split(/\n/).forEach(l=>{
+    const t=l.replace(/\[[^\]]*\]|wt%|ppm/gi,' ').replace(/[±;\t]/g,' ').trim().split(/\s+/);
+    if(t.length<2)return;
+    const e=t[0].replace(/\*|tot$/i,'');
+    const o=OX.find(x=>x.toLowerCase()===e.toLowerCase())||(/^feo$/i.test(e)?'FeOt':null);
+    const name=o||(/^[A-Za-z]{1,2}$/.test(e)?e[0].toUpperCase()+e.slice(1).toLowerCase():null);
+    if(!name)return;
+    const m=f(t[1]),s=t[2]!=null?f(t[2]):0;
+    if(isFinite(m))u[name]={m,s:isFinite(s)?s:0};
+  });
+  return u;
+}
+
+function run(){
+  if(!Object.keys(G).length){$('#st').textContent='Load the Excel database first.';return}
+  const u=parse(),keys=Object.keys(u);
+  $('#out').hidden=false;
+  if(!keys.length){$('#res').innerHTML='<p class="bad">Paste at least one line in the format “element mean SD”.</p>';return}
+  K=+$('#sig').value;
+  const minE=+$('#mine').value||1;
+  if($('#norm').checked){
+    let s=0;OX.forEach(o=>{if(u[o])s+=u[o].m});
+    if(s>0)OX.forEach(o=>{if(u[o]){u[o].m*=100/s;u[o].s*=100/s}});
+  }
+  const vols=[...document.querySelectorAll('.vol:checked')].map(c=>c.value);
+  const a0=$('#a0').value,a1=$('#a1').value;
+  const out=[];ALLOW=new Set();IX={};R.forEach(r=>(IX[r.k]||(IX[r.k]=[])).push(r));
+  for(const key in G){
+    const g=G[key];
+    if(!vols.includes(g.vol))continue;
+    if(g.age!=null){if(a0!==''&&g.age<+a0)continue;if(a1!==''&&g.age>+a1)continue}
+    ALLOW.add(key);
+    let sh=0,cm=0,z2=0,sc=0,ns=0;const mj=[0,0],tr=[0,0],bad=[];
+    for(const e of keys){
+      const s=g.st[e];if(!s)continue;
+      const su=Math.max(u[e].s,.01*Math.abs(u[e].m)),sg=Math.max(s.s,.01*Math.abs(s.m));
+      const d=Math.abs(u[e].m-s.m),ok=d<=K*(su+sg),isM=OX.includes(e),c=isM?mj:tr;
+      sh++;z2+=d*d/(su*su+sg*sg);c[1]++;
+      if(ok){cm++;c[0]++}else bad.push(e);
+      if(isM&&u[e].m>0&&s.m>0){sc+=Math.min(u[e].m,s.m)/Math.max(u[e].m,s.m);ns++}
+    }
+    if(sh<minE)continue;
+    out.push({g,sh,cm,f:cm/sh,d:Math.sqrt(z2/sh),sc:ns?sc/ns:null,mh:mahal(key,u,keys),mj,tr,bad});
+  }
+  const rk=fn=>{const s=out.filter(r=>fn(r)!=null).sort((a,b)=>fn(a)-fn(b));s.forEach((r,i)=>{(r.rk||(r.rk=[])).push(i/Math.max(1,s.length-1))})};
+  rk(r=>r.sc==null?null:-r.sc);rk(r=>r.d);rk(r=>r.mh);
+  out.forEach(r=>{r.cs=r.rk?r.rk.reduce((a,b)=>a+b)/r.rk.length:1});
+  const sf={c:r=>r.cs,f:r=>-r.f,sc:r=>r.sc==null?1:-r.sc,d:r=>r.d,mh:r=>r.mh==null?Infinity:r.mh}[$('#srt').value];
+  out.sort((a,b)=>sf(a)-sf(b)||a.d-b.d);
+  TOP=out.slice(0,5);UNK=u;
+  if(!out.length){$('#res').innerHTML='<p>No unit has at least '+minE+' shared elements. Lower the minimum or check the filters.</p>';$('#pl').hidden=true;return}
+  const fr=(c)=>c[1]?`${c[0]}/${c[1]}`:'–';
+  $('#res').innerHTML=`<table><thead><tr><th></th><th>Volcano</th><th>Unit</th><th>Reference</th><th class="n">Age BP</th><th class="n">Compatible</th><th class="n">Major</th><th class="n">Trace</th><th class="n">SC</th><th class="n">Std. Eucl. dist.</th><th class="n">Mahalanobis</th><th class="n">Combined index</th><th>Incompatible</th></tr></thead><tbody>`+
+  out.slice(0,25).map((r,i)=>{
+    const g=r.g,n=Math.max(...Object.values(g.st).map(s=>s.n));
+    return `<tr><td>${i<5?`<span class="sw" style="background:${COL[i]}"></span>`:''}</td><td>${esc(g.vol)}</td><td>${esc(g.unit)}${n<2?' <span class="note">(n=1)</span>':''}</td><td>${esc(g.ref)}</td><td class="n">${g.age!=null?Math.round(g.age):'–'}</td><td class="n"><b>${r.cm}/${r.sh}</b></td><td class="n">${fr(r.mj)}</td><td class="n">${fr(r.tr)}</td><td class="n">${r.sc!=null?r.sc.toFixed(3):'–'}</td><td class="n">${r.d.toFixed(2)}</td><td class="n">${r.mh!=null?r.mh.toFixed(2):'–'}</td><td class="n"><b>${Math.round((1-r.cs)*100)}</b></td><td class="bad">${esc(r.bad.join(', '))}</td></tr>`}).join('')+
+  `</tbody></table><p class="note">${out.length} comparable units; the first 25 are shown. <b>Combined index</b> (0–100): average of the positions obtained by the unit in the three rankings (SC, std. Euclidean distance, Mahalanobis) among the candidates; 100 = first in all three. If an index is missing (for example Mahalanobis) the others are used; the index is relative to the set of candidates and is not a probability. <b>SC</b>: Borchardt’s Similarity Coefficient, mean of the min/max ratios over the shared major oxides (1 = identical; ≥ 0.95 is an indicative threshold). <b>Std. Eucl. dist.</b>: square root of the mean of Δ²/(σ² unknown + σ² unit) over all shared elements, i.e. the distance in σ units (≈ 1 if the two compositions differ only by the expected variability). <b>Mahalanobis</b>: distance between the major-element means with covariance matrix = unit covariance + unknown variance (diagonal); computed only with at least 3 complete analyses and 2 shared oxides. For the same population D² is roughly equal to the number of oxides, so D ≈ √p.</p>`;
+  $('#pl').hidden=false;
+  plot();
+}
+
+let IX={};
+function mahal(key,u,keys){
+  const g=G[key],E=keys.filter(e=>OX.includes(e)&&g.st[e]);
+  if(E.length<2)return null;
+  const rows=(IX[key]||[]).filter(r=>E.every(e=>r.v[e]!=null)),n=rows.length;
+  if(n<3)return null;
+  const p=E.length,mu=E.map(e=>rows.reduce((a,r)=>a+r.v[e],0)/n),d=E.map((e,i)=>u[e].m-mu[i]),M=[];
+  for(let i=0;i<p;i++){
+    M.push([]);
+    for(let j=0;j<p;j++){
+      let c=0;rows.forEach(r=>{c+=(r.v[E[i]]-mu[i])*(r.v[E[j]]-mu[j])});c/=n-1;
+      if(i===j){const s=Math.max(u[E[i]].s,.01*Math.abs(u[E[i]].m));c+=s*s}
+      M[i].push(c);
+    }
+    M[i].push(d[i]);
+  }
+  for(let i=0;i<p;i++){
+    let m=i;for(let k=i+1;k<p;k++)if(Math.abs(M[k][i])>Math.abs(M[m][i]))m=k;
+    [M[i],M[m]]=[M[m],M[i]];
+    if(Math.abs(M[i][i])<1e-12)return null;
+    for(let k=i+1;k<p;k++){const f=M[k][i]/M[i][i];for(let j=i;j<=p;j++)M[k][j]-=f*M[i][j]}
+  }
+  const x=Array(p).fill(0);
+  for(let i=p-1;i>=0;i--){let s=M[i][p];for(let j=i+1;j<p;j++)s-=M[i][j]*x[j];x[i]=s/M[i][i]}
+  const q=d.reduce((a,v,i)=>a+v*x[i],0);
+  return q>=0?Math.sqrt(q):null;
+}
+function ms(src,e){
+  if(e==='Na2O+K2O'){const a=src.Na2O,b=src.K2O;return a&&b?{m:a.m+b.m,s:Math.hypot(a.s,b.s)}:null}
+  return src[e]||null;
+}
+function rv(v,e){
+  if(e==='Na2O+K2O')return v.Na2O!=null&&v.K2O!=null?v.Na2O+v.K2O:null;
+  return v[e]!=null?v[e]:null;
+}
+
+function plot(){
+  if(!UNK)return;
+  const ex=$('#sx').value,ey=$('#sy').value,c=$('#cv');
+  const w=c.clientWidth||700,h=380,dpr=window.devicePixelRatio||1;
+  c.width=w*dpr;c.height=h*dpr;
+  const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);
+  const cs=getComputedStyle(document.documentElement),fg=cs.getPropertyValue('--fg').trim(),mut=cs.getPropertyValue('--mut').trim(),ln=cs.getPropertyValue('--line').trim();
+  const ux=ms(UNK,ex),uy=ms(UNK,ey);
+  if(!ux||!uy){x.fillStyle=mut;x.font='14px system-ui';x.fillText('The unknown does not contain both selected elements.',20,40);return}
+  const topK=new Map(TOP.map((r,i)=>[r.g.vol+'|'+r.g.unit+'|'+r.g.ref,i]));
+  const pts=[];
+  let x0=ux.m-K*ux.s,x1=ux.m+K*ux.s,y0=uy.m-K*uy.s,y1=uy.m+K*uy.s;
+  R.forEach(r=>{
+    if(!ALLOW.has(r.k))return;
+    const a=rv(r.v,ex),b=rv(r.v,ey);if(a==null||b==null)return;
+    const t=topK.has(r.k)?topK.get(r.k):-1;
+    pts.push([a,b,t]);
+    if(t>=0){x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b)}
+  });
+  const px=(x1-x0||1)*.25,py=(y1-y0||1)*.25;x0-=px;x1+=px;y0-=py;y1+=py;
+  const L=52,Rr=12,T=12,B=40,X=v=>L+(v-x0)/(x1-x0)*(w-L-Rr),Y=v=>h-B-(v-y0)/(y1-y0)*(h-T-B);
+  x.font='12px system-ui';x.fillStyle=mut;x.strokeStyle=ln;x.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const vx=x0+(x1-x0)*i/5,vy=y0+(y1-y0)*i/5;
+    x.beginPath();x.moveTo(X(vx),T);x.lineTo(X(vx),h-B);x.moveTo(L,Y(vy));x.lineTo(w-Rr,Y(vy));x.stroke();
+    x.textAlign='center';x.fillText(vx.toFixed(Math.abs(x1-x0)<5?2:1),X(vx),h-B+16);
+    x.textAlign='right';x.fillText(vy.toFixed(Math.abs(y1-y0)<5?2:1),L-6,Y(vy)+4);
+  }
+  x.textAlign='center';x.fillStyle=fg;x.fillText(ex+(OX.includes(ex)||ex==='Na2O+K2O'?' (wt%)':' (ppm)'),(L+w)/2,h-6);
+  x.save();x.translate(13,h/2);x.rotate(-Math.PI/2);x.fillText(ey+(OX.includes(ey)||ey==='Na2O+K2O'?' (wt%)':' (ppm)'),0,0);x.restore();
+  x.save();x.beginPath();x.rect(L,T,w-L-Rr,h-T-B);x.clip();
+  x.globalAlpha=.35;x.fillStyle=mut;
+  pts.forEach(p=>{if(p[2]<0){x.beginPath();x.arc(X(p[0]),Y(p[1]),1.8,0,7);x.fill()}});
+  x.globalAlpha=.85;
+  pts.forEach(p=>{if(p[2]>=0){x.fillStyle=COL[p[2]];x.beginPath();x.arc(X(p[0]),Y(p[1]),3.2,0,7);x.fill()}});
+  x.globalAlpha=1;x.strokeStyle=fg;x.lineWidth=2;
+  x.strokeRect(X(ux.m-K*ux.s),Y(uy.m+K*uy.s),Math.max(2,X(ux.m+K*ux.s)-X(ux.m-K*ux.s)),Math.max(2,Y(uy.m-K*uy.s)-Y(uy.m+K*uy.s)));
+  x.beginPath();x.moveTo(X(ux.m)-6,Y(uy.m));x.lineTo(X(ux.m)+6,Y(uy.m));x.moveTo(X(ux.m),Y(uy.m)-6);x.lineTo(X(ux.m),Y(uy.m)+6);x.stroke();
+  x.restore();
+}
+
+function nm(e){
+  e=e.replace(/\[[^\]]*\]|\([^)]*\)|wt%|ppm/gi,' ').trim().replace(/\*|tot$/i,'');
+  const o=OX.find(x=>x.toLowerCase()===e.toLowerCase())||(/^feo$/i.test(e)?'FeOt':null);
+  return o||(/^[A-Za-z]{1,2}$/.test(e)?e[0].toUpperCase()+e.slice(1).toLowerCase():null);
+}
+function fromRows(rows){
+  const nameRow=r=>(r||[]).map(x=>typeof x==='string'?nm(x):null);
+  const hi=rows.findIndex(r=>nameRow(r).filter(Boolean).length>=2);
+  if(hi<0){$('#shn').textContent='No header row with element names found.';return}
+  const keep=e=>e&&(OX.includes(e)||!TR.size||TR.has(e));
+  const names=nameRow(rows[hi]).map(e=>keep(e)?e:null),acc={},doNorm=$('#norm').checked;
+  let n=0;
+  rows.slice(hi+1).forEach(r=>{
+    if(!r)return;
+    const o={};
+    names.forEach((e,j)=>{
+      if(!e)return;
+      let v=r[j];if(typeof v==='string')v=parseFloat(v.replace(',','.'));
+      if(typeof v==='number'&&isFinite(v))o[e]=v;
+    });
+    const ks=Object.keys(o);if(!ks.length)return;
+    if(doNorm){
+      const ox=OX.filter(k=>k in o),s=ox.reduce((a,k)=>a+o[k],0);
+      if(ox.length>=5&&s>0)ox.forEach(k=>{o[k]=100*o[k]/s});
+    }
+    ks.forEach(k=>{(acc[k]||(acc[k]=[])).push(o[k])});n++;
+  });
+  const out=Object.keys(acc).map(e=>{
+    const a=acc[e],k=a.length,m=a.reduce((x,y)=>x+y)/k;
+    const s=k>1?Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(k-1)):0,d=OX.includes(e)?3:2;
+    return e+' '+m.toFixed(d)+' '+s.toFixed(d);
+  });
+  if(!out.length){$('#shn').textContent='No element recognized in the header.';return}
+  $('#inp').value=out.join('\n');
+  $('#shn').textContent=n+' analyses, '+out.length+' elements. Mean and sample SD filled in on the left'+($('#norm').checked?' (major elements normalized to 100% analysis by analysis).':'.');
+}
+function shards(){
+  const L=$('#sh').value.split(/\r?\n/).filter(l=>l.trim());
+  if(L.length<2){$('#shn').textContent='A header row and at least one analysis are required.';return}
+  const sp=l=>l.includes('\t')?l.split('\t'):l.trim().split(/[;\s]+/);
+  fromRows(L.map(sp));
+}
+let WBS=null;
+function useSheet(){
+  const ws=WBS.Sheets[$('#shs').value||WBS.SheetNames[0]];
+  fromRows(XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true}));
+}
+$('#shf').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(typeof XLSX==='undefined'){$('#shn').textContent='Error: Excel library not loaded';return}
+  $('#shn').textContent='Reading…';
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      WBS=XLSX.read(fr.result,{type:'array'});
+      const s=$('#shs');
+      s.innerHTML=WBS.SheetNames.map(n=>`<option>${esc(n)}</option>`).join('');
+      s.hidden=WBS.SheetNames.length<2;
+      useSheet();
+    }catch(err){$('#shn').textContent='Error: '+err.message}
+  };
+  fr.readAsArrayBuffer(f);
+};
+$('#shs').onchange=useSheet;
+$('#mk').onclick=shards;
+$('#go').onclick=run;
+$('#sx').onchange=$('#sy').onchange=plot;
+window.addEventListener('resize',()=>{if(!$('#pl').hidden)plot()});
+</script>
+</body>
+</html>
