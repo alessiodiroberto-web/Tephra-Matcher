@@ -1,2 +1,2 @@
 # Tephra-Matcher
-Tephra Matcher is a lightweight, client-side web application designed to assist tephrochronologists and volcanologists in correlating unknown volcanic glass compositions against a reference tephra database. All computations run locally in the user's browser; no geochemical data or database files are uploaded to external servers.
+Browser-based tool to compare an unknown volcanic glass composition (major and trace elements, mean ± SD) with a database of Italian tephra. Ranks candidates using Borchardt's Similarity Coefficient, standardized Euclidean distance and Mahalanobis distance.
