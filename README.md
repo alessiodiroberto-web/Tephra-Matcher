@@ -18,5 +18,5 @@ Columns V-AI = Same major oxides and 3 volatiles normalized to 100 wt%
 **Missing Values & Qualifiers:** Leave missing measurements empty. Keep analytical qualifiers (e.g., <LOD, bdl, n.d.) as text strings **do not replace them with 0**.
 
 **Normalization:**
-If raw analytical totals are available, populate the raw data block (Cols G–U) and calculate the `Normalized` block (Cols V–AI) to 100 wt% on the 10 major oxides (SiO2 through P2O5, excluding volatiles Cl, F, SO).
+If raw analytical totals are available, populate the raw data block (Cols G–U) and calculate the Normalized block (Cols V–AI) to 100 wt% on the 10 major oxides (SiO2 through P2O5, excluding volatiles Cl, F, SO).
 If data were published already normalized, leave the un-normalized block empty and enter the values directly in the Normalized block.
