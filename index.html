@@ -37,6 +37,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
 .bad{color:var(--bad)}
 canvas{width:100%;height:380px;display:block}
+#input-format .tw{border:1px solid var(--line);border-radius:6px;margin:10px 0}
+#input-format th{background:var(--bg)}
+#format-kind{width:auto}
 #st{margin-left:10px;color:var(--mut)}
 </style>
 </head>
@@ -90,6 +93,21 @@ Oxides in wt%, trace elements in ppm. The SD is optional."></textarea>
 </div>
 </section>
 
+<section id="input-format">
+<h2>4. Input file format</h2>
+<p class="note">The Excel template follows the English database layout: section labels on row 1, column names on row 2 and one glass analysis per row from row 3. The downloaded template includes real example rows. Replace or remove every example row before adding your own data. Use wt% for major oxides and ppm for trace elements. For an unknown, fill in the measured columns and optionally <code>Sample</code>. Leave unused columns and the normalized block blank. Upload the completed file under “I have the individual analyses (shards)” and select the sheet you filled in.</p>
+<label for="format-kind">Preview sheet</label>
+<select id="format-kind">
+<option value="major">Major elements (wt%)</option>
+<option value="trace">Trace elements (ppm)</option>
+</select>
+<div class="tw" tabindex="0" role="region" aria-label="Example input table">
+<table id="format-table"><caption class="note">Campanian Ignimbrite (Y5), sample DS_137.51, Campi Flegrei · real analyses from the English database with a fictional reference</caption><thead id="format-head"></thead><tbody id="format-body"></tbody></table>
+</div>
+<p><button id="format-download" type="button">Download Excel template with examples</button>
+<span id="format-status" class="note" role="status"></span></p>
+</section>
+
 <section id="out" hidden>
 <h2>Candidates</h2>
 <div class="tw" id="res"></div>
@@ -110,6 +128,7 @@ Oxides in wt%, trace elements in ppm. The SD is optional."></textarea>
 <script>
 const $=s=>document.querySelector(s);
 const OX=['SiO2','TiO2','Al2O3','FeOt','MnO','MgO','CaO','Na2O','K2O','P2O5'];
+const INPUT_FORMATS={"major": {"headers": [["Identification", null, null, null, null, null, null, null, "un-normalized", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, "Normalized", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], ["Eruption", "Age [BP]", "Age min [BP]", "Age max [BP]", "Sample", "Analytical Method", "Reference", "Column1", "SiO2 [wt%]", "TiO2 [wt%] ", "Al2O3 [wt%] ", "FeOt [wt%] ", "MnO [wt%] ", "MgO [wt%]", "CaO [wt%] ", "Na2O [wt%] ", "K2O [wt%] ", "P2O5 [wt%] ", "Cl [wt%] ", "F [wt%] ", "SO3 [wt%] ", "Total [wt%] ", "Total volatile free [wt%]", "Column2", "SiO2 [wt%]2", "TiO2 [wt%] 2", "Al2O3 [wt%] 2", "FeOt [wt%] 2", "MnO [wt%] 2", "MgO [wt%] 2", "CaO [wt%] 2", "Na2O [wt%] 2", "K2O [wt%] 2", "P2O5 [wt%] 2", "Cl [wt%] 2", "F [wt%] 2", "SO3 [wt%] 2", "total [wt%] 2", "Normalization", "Reference ID", "Material", "Deposit", "Site", "t IntChron original"]], "sheet": "Glass - major el.", "examples": [["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "EPMA-WDS", "Lorem Ipsum et al.", null, 56.753, 0.362, 18.317, 2.664, 0.191, 0.303, 1.453, 4.573, 7.353, 0.054, 0.641, 0, null, 92.519, null, null, 61.67262532193038, 0.3933799158905926, 19.90480640709388, 2.894928441802593, 0.2075568064505613, 0.3292655097095291, 1.578953087815003, 4.969409821457679, 7.990393705921345, 0.05868098192843093, 0.6965649891874858, 0, null, null, "Reported in the source", "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "EPMA-WDS", "Lorem Ipsum et al.", null, 60.223, 0.369, 17.864, 2.977, 0.107, 0.513, 2.195, 4.091, 8.59, 0.024, 0.375, 0, null, 97.243, null, null, 62.11566429094509, 0.3805967840087465, 18.42542262745867, 3.070559962043464, 0.1103627530865471, 0.5291223582560622, 2.263983579672625, 4.219570307262281, 8.859963074891958, 0.02475426237455262, 0.3867853496023846, 0, null, null, "Reported in the source", "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "EPMA-WDS", "Lorem Ipsum et al.", null, 57.445, 0.399, 17.745, 2.718, 0.267, 0.299, 1.728, 6.046, 6.773, 0.048, 0.743, 0.151, null, 94.13, null, null, 61.45953695382376, 0.4268840672743612, 18.98510720246501, 2.907947104891513, 0.2856592630632944, 0.3198955792356741, 1.848761073308512, 6.468523986819017, 7.246330294860271, 0.05135447425856977, 0.7949244661274445, 0.1615526169384174, null, null, "Reported in the source", "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "EPMA-WDS", "Lorem Ipsum et al.", null, 57.61, 0.437, 17.63, 2.877, 0.204, 0.305, 1.625, 6.035, 6.552, 0.045, 0.751, 0.17, null, 94, null, null, 61.73381911701672, 0.4682811830261466, 18.89198456922417, 3.082940420060008, 0.2186026575225032, 0.3268324046292327, 1.741320188598371, 6.466995285040721, 7.021003000428633, 0.04822117445349336, 0.8047578225460781, 0.1821688812687527, null, null, "Reported in the source", "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "EPMA-WDS", "Lorem Ipsum et al.", null, 59.674, 0.436, 16.83, 2.922, 0.222, 0.312, 1.578, 5.894, 6.79, 0.067, 0.749, 0.046, null, 95.332, null, null, 62.99709685932964, 0.4602797571918713, 17.76722090261283, 3.084718923198734, 0.2343626286619161, 0.3293745051464767, 1.665874901029296, 6.222222222222223, 7.168118237001849, 0.07073106360517288, 0.7907099498548431, 0.04856162575877541, null, null, "Reported in the source", "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null]]}, "trace": {"headers": [["Identification", null, null, null, null, null, null, null, "Trace elements", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], ["Eruption", "Age [BP]", "Column4", "Column3", "Sample", "Analytical Method", "Reference", "Column1", "Li [ppm]", "Be [ppm]", "Sc [ppm]", "Ti [ppm]", "V [ppm]", "Cr [ppm]", "Mn [ppm]", "Co [ppm]", "Ni [ppm]", "Cu [ppm]", "Ga [ppm]", "Rb [ppm]", "Sr [ppm]", "Y [ppm]", "Zr [ppm]", "Nb [ppm]", "Cs [ppm]", "Ba [ppm]", "La [ppm]", "Ce [ppm]", "Pr [ppm]", "Nd [ppm]", "Sm [ppm]", "Eu [ppm]", "Gd [ppm]", "Tb [ppm]", "Dy [ppm]", "Ho [ppm]", "Er [ppm]", "Tm [ppm]", "Yb [ppm]", "Lu [ppm]", "Hf [ppm]", "Ta [ppm]", "Pb [ppm]", "Th [ppm]", "U [ppm]", "Si [ppm]", "Al [ppm]", "Ca [ppm]", "Fe [ppm]", "Sm (149) [ppm]", "Column2", "Reference ID", "Material", "Deposit", "Site", "t IntChron original"]], "sheet": "Glass - trace el.", "examples": [["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "LA-ICP-MS", "Lorem Ipsum et al.", null, null, null, 3.904202424724089, 2381.847261225077, 60.81274312966102, null, 942.0758396705141, null, "<LOD", null, null, 271.9322176515314, 500.2391597367672, 22.73006434246552, 199.3675218275182, 29.14341629893754, null, 432.3237638747906, 50.61808241336096, 104.478073221469, 12.6425005270218, 34.41759108413991, 6.484333292563808, 1.998835225163642, 3.066747141390603, null, 4.346797765138712, null, 1.380032008791307, null, 4.108609394392506, "<LOD", null, 2.284046328662711, 40.37348155997247, 16.72932749315907, 4.537699043854746, null, 103585.743073353, null, null, null, null, "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "LA-ICP-MS", "Lorem Ipsum et al.", null, null, null, 5.120695328584691, 2587.835886895993, 68.45443666596513, null, 869.0646768575718, null, "<LOD", null, null, 290.5700129114592, 643.338339268177, 16.97321953089288, 194.4905054779738, 31.60661601356166, null, 873.4960948183789, 44.63392152699427, 86.19438762320723, 9.614146661166728, 35.3218420748752, 6.72714648382271, 2.263381238798228, 8.275771869797476, null, 5.505591459694591, null, 2.422706919539487, null, 2.128739986623441, 0.2271071295666184, null, 1.816707186481464, 41.10403970452471, 14.4873200443405, 4.383618697809684, null, 109004.4431986312, null, null, null, null, "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "LA-ICP-MS", "Lorem Ipsum et al.", null, null, null, 3.032463237031861, 2539.040762293575, 14.969073456527, null, 1755.884970339108, null, "<LOD", null, null, 436.9707610476997, 13.41695760651105, 54.01309262351464, 660.4627698694062, 107.8497165877722, null, 23.1858873051108, 131.9658544763998, 244.0492890523246, 25.38255660586416, 80.71091718148176, 16.46019626239944, 1.065405235813427, 9.761059171302636, null, 9.174491401297848, null, 4.973887956339668, null, 5.318462371652212, 0.6297263482932642, null, 4.757201983357893, 74.61307599352448, 53.80932142895655, 17.17931214567797, null, 103091.2696025297, null, null, null, null, "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "LA-ICP-MS", "Lorem Ipsum et al.", null, null, null, 4.745512480496466, 2638.753038923164, 16.12371275639545, null, 1766.421369632719, null, 35.73722585420494, null, null, 367.5395221974003, 22.8027698288378, 64.8724124157659, 689.846799684976, 114.9883317890021, null, 22.60353606616826, 137.172386617079, 252.269100481749, 26.14985212451442, 80.57808418679414, 18.45708831475932, 1.131093103123256, 11.17064202778218, null, 10.70066951499435, null, 4.608604032860699, null, 3.262107765584168, 1.305863102158287, null, 4.766247016255027, 65.45800032807816, 54.48396620427465, 18.26223148020219, null, 108153.1288743221, null, null, null, null, "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null], ["Campanian Ignimbrite (Y5)", 39900, null, null, "DS_137.51", "LA-ICP-MS", "Lorem Ipsum et al.", null, null, null, 3.057432374393212, 2837.061793406745, 15.38463325788981, null, 1960.314116211192, null, "<LOD", null, null, 485.6845998132648, 23.0343696398679, 66.6015611279044, 731.8042639706957, 118.5311843212614, null, 17.51300374717463, 155.3916890371143, 282.8032092965361, 27.21744946297696, 106.2676520906154, 18.17759982646953, 1.239817877585432, 12.06701487045441, null, 11.4834254430646, null, 5.304235186616705, null, 5.163455635323623, 1.510758962725596, null, 5.795734164065776, 66.78294457008313, 64.32446125829179, 20.93400163382753, null, 121599.4031642703, null, null, null, null, "EXAMPLE-REF-001", "Volcanic glass", "distal lacustrine", "Dead Sea DSDDP 5017-1A", null]]}};
 const COL=['#d1495b','#2e86ab','#e0a100','#6a994e','#9b5de5'];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num=x=>typeof x==='number'&&isFinite(x)?x:null;
@@ -129,24 +148,46 @@ function load(buf,name){
   G={};R=[];TR=new Set();
   const vols=new Set();
   wb.SheetNames.forEach(sn=>{
-    const m=sn.match(/^(.+) - (maggiori|tracce)$/);if(!m)return;
-    const vol=m[1],maj=m[2]==='maggiori';
+    const m=sn.trim().match(/^(.+?)\s+-\s+(major el\.|trace el\.|maggiori|tracce)$/i);
+    if(!m)return;
+    const vol=m[1],maj=/^(major el\.|maggiori)$/i.test(m[2]);
     const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:true});
-    const h=rows[1]||[],cols=[];
-    if(!maj)h.forEach((x,j)=>{const t=typeof x==='string'&&x.match(/^([A-Z][a-z]?)\s*\[ppm\]$/);if(t&&j>=8)cols.push([j,t[1]])});
+    const headers=(rows[1]||[]).map(value=>String(value??'').trim());
+    const column=(...names)=>headers.findIndex(h=>names.includes(h.toLowerCase()));
+    const unitCol=column('eruption','eruption / unit','eruzione / unità');
+    const refCol=column('reference','riferimento');
+    const ageCol=column('age [bp]','età riportata [bp]');
+    const minAgeCol=column('age min [bp]','column4','colonna4');
+    const maxAgeCol=column('age max [bp]','column3','colonna3');
+    const rawCols=OX.map(o=>column(o.toLowerCase()+' [wt%]'));
+    const normCols=OX.map(o=>headers.findIndex(h=>
+      h.toLowerCase().replace(/\]\s*2$/,']2')===o.toLowerCase()+' [wt%]2'));
+    const traceCols=[];
+    if(!maj)headers.forEach((h,j)=>{
+      const t=h.match(/^([A-Z][a-z]?)\s*\[ppm\]$/);
+      if(t)traceCols.push([j,t[1]]);
+    });
     for(let i=2;i<rows.length;i++){
-      const r=rows[i];if(!r||!r[0])continue;
+      const r=rows[i];if(!r||!r[unitCol])continue;
       const v={};
       if(maj){
-        const raw=OX.map((o,k)=>num(r[8+k]));
+        const raw=rawCols.map(j=>num(r[j]));
         const s=raw.reduce((a,b)=>a+(b||0),0);
-        OX.forEach((o,k)=>{let n=num(r[24+k]);if(n==null&&raw[k]!=null&&s>0)n=100*raw[k]/s;if(n!=null)v[o]=n});
-      }else cols.forEach(([j,e])=>{const n=num(r[j]);if(n!=null){v[e]=n;TR.add(e)}});
+        OX.forEach((o,k)=>{
+          let n=num(r[normCols[k]]);
+          if(n==null&&raw[k]!=null&&s>0)n=100*raw[k]/s;
+          if(n!=null)v[o]=n;
+        });
+      }else traceCols.forEach(([j,e])=>{
+        const n=num(r[j]);if(n!=null){v[e]=n;TR.add(e)}
+      });
       if(!Object.keys(v).length)continue;
-      const key=vol+'|'+r[0]+'|'+(r[6]||'');
-      const g=G[key]||(G[key]={vol,unit:String(r[0]),ref:String(r[6]||''),ages:[],vals:{}});
+      const unit=String(r[unitCol]),ref=String(r[refCol]??'');
+      const key=vol+'|'+unit+'|'+ref;
+      const g=G[key]||(G[key]={vol,unit,ref,ages:[],vals:{}});
       vols.add(vol);
-      const a=num(r[1])!=null?r[1]:(num(r[2])!=null&&num(r[3])!=null?(r[2]+r[3])/2:null);
+      const low=num(r[minAgeCol]),high=num(r[maxAgeCol]);
+      const a=num(r[ageCol])??(low!=null&&high!=null?(low+high)/2:null);
       if(a!=null)g.ages.push(a);
       for(const e in v)(g.vals[e]||(g.vals[e]=[])).push(v[e]);
       R.push({k:key,v});
@@ -160,7 +201,7 @@ function load(buf,name){
       g.st[e]={m,s:n>1?Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(n-1)):0,n};
     }
   });
-  if(!R.length)throw new Error('no sheets named “… - maggiori/tracce” found');
+  if(!R.length)throw new Error('no analysis sheets with recognized headings found (expected “... - major el.” or “... - trace el.”)');
   $('#vols').innerHTML=[...vols].sort().map(v=>`<label><input type="checkbox" class="vol" value="${esc(v)}" checked> ${esc(v)}</label>`).join('');
   const axes=[...OX,'Na2O+K2O',...[...TR].sort()];
   $('#sx').innerHTML=$('#sy').innerHTML=axes.map(a=>`<option>${esc(a)}</option>`).join('');
@@ -375,6 +416,38 @@ $('#shs').onchange=useSheet;
 $('#mk').onclick=shards;
 $('#go').onclick=run;
 $('#sx').onchange=$('#sy').onchange=plot;
+function previewInputFormat(){
+  const {headers,examples}=INPUT_FORMATS[$('#format-kind').value||'major'];
+  const groupCells=[];
+  for(const label of headers[0]){
+    if(label!=null||!groupCells.length)groupCells.push({label:label??'',span:1});
+    else groupCells[groupCells.length-1].span++;
+  }
+  $('#format-head').innerHTML='<tr>'+groupCells.map(({label,span})=>
+    `<th colspan="${span}">${esc(label)}</th>`).join('')+'</tr><tr>'+
+    headers[1].map(label=>`<th scope="col">${esc(label??'')}</th>`).join('')+'</tr>';
+  $('#format-body').innerHTML=examples.map(row=>'<tr>'+row.map(value=>
+    `<td${typeof value==='number'?' class="n"':''}>${esc(value??'')}</td>`).join('')+'</tr>').join('');
+}
+
+function downloadInputTemplate(){
+  const status=$('#format-status');
+  status.textContent='';
+  try{
+    if(typeof XLSX==='undefined')throw new Error('Excel library unavailable. Reload the page with an internet connection.');
+    const workbook=XLSX.utils.book_new();
+    for(const {headers,examples,sheet} of Object.values(INPUT_FORMATS)){
+      XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([...headers,...examples]),sheet);
+    }
+    XLSX.writeFile(workbook,'Tephra_Matcher_Input_Template.xlsx');
+  }catch(error){
+    status.textContent=error.message;
+  }
+}
+
+$('#format-kind').onchange=previewInputFormat;
+$('#format-download').onclick=downloadInputTemplate;
+previewInputFormat();
 window.addEventListener('resize',()=>{if(!$('#pl').hidden)plot()});
 </script>
 </body>
